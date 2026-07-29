@@ -31,4 +31,12 @@ struct ComPort {
 // check if the returned value is NULL, no devices found or error occurred
 ComPort* listDevices();
 
+#if defined(_WIN32)
+HANDLE openComPort(ComPort* port);
+void sendCommand(HANDLE hCom, const char* command);
+#elif defined(ESP_PLATFORM) || defined(ESP32)
+BluetoothSerial openComPort(ComPort* port, const char* deviceName); // device name for ESP32
+void sendCommand(BluetoothSerial& serial, const char* command);
+#endif
+
 #endif // COM_H
