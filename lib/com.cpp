@@ -9,7 +9,10 @@ ComPort* listDevices() {
 	#if defined(_WIN32)
 	HKEY hKey;
 	LONG result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", 0, KEY_READ, &hKey);
-	if (result != ERROR_SUCCESS) {
+	if (result == ERROR_FILE_NOT_FOUND) {
+		printf("No serial devices found.\n");
+		return NULL;
+	} else if (result != ERROR_SUCCESS) {
 		printf("Failed to open registry key. Error code: %ld\n", result);
 		return NULL;
 	}
