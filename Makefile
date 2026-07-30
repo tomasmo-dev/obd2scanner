@@ -1,6 +1,6 @@
 # --- Windows variables ---
 CC_WIN = g++
-CFLAGS_WIN = -Wall -Wextra -D_WIN32 -Iinclude
+CFLAGS_WIN = -Wall -Wextra -D_WIN32 -Iinclude -g
 TARGET_WIN = obd_scanner.exe
 SRC_WIN = src/main.cpp lib/com.cpp
 
@@ -36,7 +36,7 @@ flash: esp
 # 4. Cleanup
 clean:
 	@echo "Deleting build files..."
-	rm -f $(TARGET_WIN)
+	del /q /f $(TARGET_WIN)
 	# arduino-cli manages its cache in temporary folders,
 	# but you can clear the cache explicitly to be safe:
-	$(CLI) cache clean
+	# CLI cache clean

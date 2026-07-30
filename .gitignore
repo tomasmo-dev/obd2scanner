@@ -1,3 +1,6 @@
 *~
 obj/
 bin/
+obd_scanner.exe
+*.exe
+.vscode/
