@@ -13,7 +13,7 @@ int main() {
   printf("Number of devices found: %d\n", DS_COUNT(devices));
 
   printf("Opening: %s", devices->portName);
-  HANDLE h = openComPort(devices);
-  closeComPort(&h);
+  HANDLE h = openComPort(devices, 0);
+  closeComPort();
   return 0;
 }

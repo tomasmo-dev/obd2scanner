@@ -35,10 +35,12 @@ ComPort* listDevices();
 HANDLE openComPort(ComPort* port, int baudrate);
 void closeComPort();
 void sendCommand(const char* command);
+char* readConnection();
 #elif defined(ESP_PLATFORM) || defined(ESP32)
 BluetoothSerial openComPort(ComPort* port, const char* deviceName); // device name for ESP32
 void closeComPort();
 void sendCommand(const char* command);
+char* readConnection();
 #endif
 
 #endif // COM_H

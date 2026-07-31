@@ -92,6 +92,8 @@ HANDLE openComPort(ComPort* port, int baudrate) {
 
 	SetCommState(hCom, &dcb_param);
 
+	PurgeComm(hCom, PURGE_RXCLEAR | PURGE_TXCLEAR); // purge the connection before using it
+
 	return hCom;
 }
 void closeComPort() {
@@ -102,6 +104,44 @@ void sendCommand(const char* command) {
 	DWORD written = 0;
 
 	WriteFile(hCom, command, strlen(command), &written, NULL);
+}
+
+char* readConnection() {
+
+	char* output = NULL;
+	COMMTIMEOUTS timeouts = {0};
+
+	timeouts.ReadIntervalTimeout = 20; // max time in between bytes
+	timeouts.ReadTotalTimeoutMultiplier = 1;  // Per-byte timeout
+    timeouts.ReadTotalTimeoutConstant = 50; // Constant timeout (ms)
+
+    timeouts.WriteTotalTimeoutMultiplier = 1; // Per-byte timeout
+    timeouts.WriteTotalTimeoutConstant = 50;// Constant timeout (ms)
+
+	SetCommTimeouts(hCom, &timeouts);
+
+	DWORD bytes_read = 0;
+	bool reading = true;
+
+	char buffer[256] = {0};
+
+	while (reading) {
+		ReadFile(hCom,
+				buffer,
+				sizeof(buffer),
+				&bytes_read,
+				NULL);
+
+		if (bytes_read < 256) {
+			reading = false;
+		}
+
+		for (int i = 0; i < bytes_read; i++) {
+			ds_push(output, buffer[i]);
+		}
+	}
+
+	return output;
 }
 
 #elif defined(ESP_PLATFORM) || defined(ESP32)
