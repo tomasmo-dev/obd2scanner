@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /*
  * Allows this C header to be safely included in C++ projects
@@ -12,6 +13,24 @@
 extern "C"
 {
 #endif
+
+    typedef struct
+    {
+        bool check_engine_on;
+        uint8_t dtc_count;
+
+        bool misfire_test_available;
+        bool fuel_system_test_available;
+        bool components_test_available;
+
+        bool is_spark_engine;
+
+        bool misfire_test_complete;
+        bool fuel_system_test_complete;
+        bool components_test_complete;
+
+    } obd2_dtc_status_t;
+    
 
     /**
      * @brief Function pointer for decoding raw OBD2 payload bytes.

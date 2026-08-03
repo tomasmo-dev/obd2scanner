@@ -15,13 +15,49 @@ bool is_pid_supported(double decoded_mask, uint8_t target_pid) {
     return (bitmask & check_mask) != 0;
 }
 
-void parse_dtc_since_cleared(double decoded_mask) {
+obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
     uint32_t raw = (uint32_t)decoded_mask;
 
     uint8_t byte_A = (raw >> 24) & 0xFF;
+    uint8_t byte_B = (raw >> 16) & 0xFF;
+    uint8_t byte_C = (raw >> 8) & 0xFF;
+    uint8_t byte_D = raw & 0xFF;
 
     bool check_engine = (byte_A & 0b10000000) != 0;
     uint8_t dtc_cnt = (byte_A   & 0b01111111);
+
+    // byte_b & 0b10000000 -> reserved, should be 0
+
+    bool misfire_available_dtc = (byte_B & (1 << 0)) == 1;
+    bool fuel_system_available_dtc = (byte_B & (1 << 1)) == 1;
+    bool components_available_dtc = (byte_B & (1 << 2)) == 1;
+
+    bool is_spark_engine = (byte_B & (1 << 3)) == 0; // if true then its spark engine, else compression engine
+
+
+    // unsupported tests are always 0 (true in this case)
+
+    bool misfire_complete_dtc = (byte_B & (1 << 4)) == 0;
+    bool fuel_system_complete_dtc = (byte_B & (1 << 5)) == 0;
+    bool components_complete_dtc = (byte_B & (1 << 6)) == 0;
+
+    // 7. bit is reserved and unused
+
+    obd2_dtc_status_t status = {
+        .check_engine_on = check_engine,
+        .dtc_count = dtc_cnt,
+
+        .misfire_test_available = misfire_available_dtc,
+        .misfire_test_complete = misfire_complete_dtc,
+
+        .fuel_system_test_available = fuel_system_available_dtc,
+        .fuel_system_test_complete = fuel_system_complete_dtc,
+
+        .components_test_available = components_available_dtc,
+        .components_test_complete = components_complete_dtc,
+    };
+
+    return status;
 }
 
 // ---- low level decoders ----
