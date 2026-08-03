@@ -2,7 +2,7 @@
 CC_WIN = g++
 CFLAGS_WIN = -Wall -Wextra -D_WIN32 -Iinclude -g
 TARGET_WIN = obd_scanner.exe
-SRC_WIN = src/main.cpp lib/com.cpp
+SRC_WIN = src/main.cpp lib/com.cpp lib/obd2/pid_map.c
 
 # --- ESP32 variables ---
 CLI = arduino-cli
