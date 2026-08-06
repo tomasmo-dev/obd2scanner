@@ -31,6 +31,31 @@ extern "C"
 
     } obd2_dtc_status_t;
     
+    typedef struct
+    {
+        uint8_t category;
+        uint16_t category_number;
+    } obd2_dtc_freeze_frame_t;
+
+    typedef struct
+    {
+        fuel_system_status_t sys1;
+        
+        bool has_sys2;
+        fuel_system_status_t sys2;
+
+    } fuel_system_status_state_t;
+
+    typedef enum {
+        MOTOR_OFF,
+        OPEN_LOOP_INSUFFICIENT_TEMP,
+        CLOSED_LOOP_OXYGEN_SENSOR_FEEDBACK,
+        OPEN_LOOP_ENGINE_LOAD_OR_FUEL_CUT_DECEL,
+        OPEN_LOOP_SYSTEM_FAIL,
+        CLOSED_LOOP_ATLEAST_ONE_OXYGEN_SENSOR_FAULT_FEEDBACK_SYSTEM,
+        UNKNOWN
+    } fuel_system_status_t;
+    
 
     /**
      * @brief Function pointer for decoding raw OBD2 payload bytes.

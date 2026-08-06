@@ -60,6 +60,27 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
     return status;
 }
 
+static fuel_system_status_t decode_single_fuel_system(uint8_t byte) {
+    switch (byte)
+    {
+        case 0:
+            return MOTOR_OFF;
+        case 1:
+            return OPEN_LOOP_INSUFFICIENT_TEMP;
+        case 2:
+            return CLOSED_LOOP_OXYGEN_SENSOR_FEEDBACK;
+        case 4:
+            return OPEN_LOOP_ENGINE_LOAD_OR_FUEL_CUT_DECEL;
+        case 8:
+            return OPEN_LOOP_SYSTEM_FAIL;
+        case 16:
+            return CLOSED_LOOP_ATLEAST_ONE_OXYGEN_SENSOR_FAULT_FEEDBACK_SYSTEM;
+
+        default:
+            return UNKNOWN;
+    }
+}
+
 // ---- low level decoders ----
 
 double decode_bitmask_4byte(uint8_t* data, size_t length) {
@@ -75,11 +96,44 @@ double decode_bitmask_4byte(uint8_t* data, size_t length) {
     return (double)bitmask;
 }
 
+obd2_dtc_freeze_frame_t decode_freeze_frame(uint8_t* data, size_t length) {
+    obd2_dtc_freeze_frame_t frame = {0};
+    
+    if (length < 2) return frame;
+
+
+    frame.category = data[0] >> 6;
+    frame.category_number = ((uint16_t)data[1] << 6) | (data[0] & 0b00111111);
+
+    return frame;
+}
+
+fuel_system_status_state_t decode_fuel_system(uint8_t* data, size_t length) {
+    fuel_system_status_state_t state = {0};
+
+    if (length < 2) return state;
+
+    state.sys1 = decode_single_fuel_system(data[0]);
+    state.sys2 = decode_single_fuel_system(data[1]);
+
+    state.has_sys2 = data[1] != 0; // if == 0 then probably unsupported
+
+    return state;
+}
+
+uint8_t decode_percent(uint8_t* data, size_t length) {
+    return data[0] / 2.55;
+}
+
+int16_t decode_temp_c(uint8_t* data, size_t length) {
+    return data[0] - 40;
+}
+
 static const obd2_pid_definition_t STANDART_PIDS[] = {
     {0x00, "PIDs supported [01 - 20]", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
     {0x01, "Monitor status since DTCs cleared", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
-    {0x02, "Freeze frame DTC", "Raw", decode_raw_2byte, 2, 0, 65535, "DTC that caused freeze frame"},
-    {0x03, "Fuel system status", "Bitmask", decode_raw_2byte, 2, 0, 65535, ""},
+    {0x02, "Freeze frame DTC", "Raw", decode_freeze_frame, 2, 0, 65535, "DTC that caused freeze frame"},
+    {0x03, "Fuel system status", "Bitmask", decode_fuel_system, 2, 0, 65535, ""},
     {0x04, "Calculated engine load", "%", decode_percent, 1, 0, 100, ""},
     {0x05, "Engine coolant temperature", "°C", decode_temp_c, 1, -40, 215, ""},
     {0x06, "Short term fuel trim (Bank 1)", "%", decode_fuel_trim, 1, -100, 99.2, ""},
