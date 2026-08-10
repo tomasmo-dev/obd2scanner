@@ -145,6 +145,58 @@ double decode_raw_1byte(uint8_t* data, size_t length) {
     return data[0];
 }
 
+double decode_rpm(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return (256.0 * data[0] + data[1]) / 4.0;
+}
+
+double decode_timing_advance(uint8_t* data, size_t length) {
+    return (data[0] / 2) - 64;
+}
+
+double decode_maf(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return (256.0 * data[0] + data[1]) / 100.0;
+}
+
+double decode_o2_voltage(uint8_t* data, size_t length) {
+    return data[0] / 200.0;
+} 
+
+double decode_raw_2byte(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return 256.0 * data[0] + data[1];
+}
+
+double decode_fuel_rail_rel(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return 0.079 * (256.0 * data[0] + data[1]);
+}
+
+double decode_fuel_rail_abs(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return 10.0 * (256.0 * data[0] + data[1]);
+}
+
+double decode_o2_ratio(uint8_t* data, size_t length) {
+    if (length != 4) return 0;
+    float afr =     (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
+    float voltage = (float) (8.0/65536.0) * (256.0 * data[2] + data[3]);
+
+    uint32_t afr_bits, volt_bits;
+    memcpy(&afr_bits, &afr, sizeof(float));
+    memcpy(&volt_bits, &voltage, sizeof(float));
+
+    uint64_t combined = ((uint64_t) afr_bits << 32) | volt_bits;
+
+    double result;
+    memcpy(&result, &combined, sizeof(double));
+
+    return result;
+}
+
 static const obd2_pid_definition_t STANDART_PIDS[] = {
     {0x00, "PIDs supported [01 - 20]", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
     {0x01, "Monitor status since DTCs cleared", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
