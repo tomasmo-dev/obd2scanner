@@ -34,6 +34,42 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
 
     bool is_spark_engine = (byte_B & (1 << 3)) == 0; // if true then its spark engine, else compression engine
 
+    bool vvt_test_available;
+    bool oxygen_sensor_heater_test_available;
+    bool oxygen_sensor_test_available;
+    bool gasoline_particulate_filter_test_available;
+    bool secondary_air_system_test_available;
+    bool evaporative_system_test_available;
+    bool heated_catalyst_test_available;
+    bool catalyst_test_available;
+
+    bool egr_system_test_available;
+    bool pm_filter_monitoring_test_available;
+    bool exhaust_gas_sensor_test_available;
+    bool boost_pressure_test_available;
+    bool nox_scr_sensor_test_available;
+    bool nmhc_catalyst_test_available;
+
+
+    if (is_spark_engine) {
+        vvt_test_available = (byte_C & (1 << 7)) == 1;
+        oxygen_sensor_heater_test_available = (byte_C & (1 << 6)) == 1;
+        oxygen_sensor_test_available = (byte_C & (1 << 5)) == 1;
+        gasoline_particulate_filter_test_available = (byte_C & (1 << 4)) == 1;
+        secondary_air_system_test_available = (byte_C & (1 << 3)) == 1;
+        evaporative_system_test_available = (byte_C & (1 << 2)) == 1;
+        heated_catalyst_test_available = (byte_C & (1 << 1)) == 1;
+        catalyst_test_available = (byte_C & (1 << 0)) == 1;
+
+    } else {
+        egr_system_test_available = (byte_C & (1 << 7)) == 1;
+        pm_filter_monitoring_test_available = (byte_C & (1 << 6)) == 1;
+        exhaust_gas_sensor_test_available = (byte_C & (1 << 5)) == 1;
+        boost_pressure_test_available = (byte_C & (1 << 4)) == 1;
+        nox_scr_sensor_test_available = (byte_C & (1 << 3)) == 1;
+        nmhc_catalyst_test_available = (byte_C & (1 << 2)) == 1;
+    }
+
 
     // unsupported tests are always 0 (true in this case)
 
@@ -43,9 +79,46 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
 
     // 7. bit is reserved and unused
 
+    bool vvt_test_complete;
+    bool oxygen_sensor_heater_test_complete;
+    bool oxygen_sensor_test_complete;
+    bool gasoline_particulate_filter_test_complete;
+    bool secondary_air_system_test_complete;
+    bool evaporative_system_test_complete;
+    bool heated_catalyst_test_complete;
+    bool catalyst_test_complete;
+
+    bool egr_system_test_complete;
+    bool pm_filter_monitoring_test_complete;
+    bool exhaust_gas_sensor_test_complete;
+    bool boost_pressure_test_complete;
+    bool nox_scr_sensor_test_complete;
+    bool nmhc_catalyst_test_complete;
+
+    if (is_spark_engine) {
+        vvt_test_complete = (byte_D & (1 << 7)) == 0;
+        oxygen_sensor_heater_test_complete = (byte_D & (1 << 6)) == 0;
+        oxygen_sensor_test_complete = (byte_D & (1 << 5)) == 0;
+        gasoline_particulate_filter_test_complete = (byte_D & (1 << 4)) == 0;
+        secondary_air_system_test_complete = (byte_D & (1 << 3)) == 0;
+        evaporative_system_test_complete = (byte_D & (1 << 2)) == 0;
+        heated_catalyst_test_complete = (byte_D & (1 << 1)) == 0;
+        catalyst_test_complete = (byte_D & (1 << 0)) == 0;
+
+    } else {
+        egr_system_test_complete = (byte_D & (1 << 7)) == 0;
+        pm_filter_monitoring_test_complete = (byte_D & (1 << 6)) == 0;
+        exhaust_gas_sensor_test_complete = (byte_D & (1 << 5)) == 0;
+        boost_pressure_test_complete = (byte_D & (1 << 4)) == 0;
+        nox_scr_sensor_test_complete = (byte_D & (1 << 3)) == 0;
+        nmhc_catalyst_test_complete = (byte_D & (1 << 2)) == 0;
+    }
+
     obd2_dtc_status_t status = {
         .check_engine_on = check_engine,
         .dtc_count = dtc_cnt,
+
+        .is_spark_engine = is_spark_engine,
 
         .misfire_test_available = misfire_available_dtc,
         .misfire_test_complete = misfire_complete_dtc,
@@ -56,6 +129,51 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
         .components_test_available = components_available_dtc,
         .components_test_complete = components_complete_dtc,
     };
+
+    if (is_spark_engine) {
+        status.vvt_test_available = vvt_test_available;
+        status.vvt_test_complete = vvt_test_complete;
+
+        status.oxygen_sensor_heater_test_available = oxygen_sensor_heater_test_available;
+        status.oxygen_sensor_heater_test_complete = oxygen_sensor_heater_test_complete;
+
+        status.oxygen_sensor_test_available = oxygen_sensor_test_available;
+        status.oxygen_sensor_test_complete = oxygen_sensor_test_complete;
+
+        status.gasoline_particulate_filter_test_available = gasoline_particulate_filter_test_available;
+        status.gasoline_particulate_filter_test_complete = gasoline_particulate_filter_test_complete;
+
+        status.secondary_air_system_test_available = secondary_air_system_test_available;
+        status.secondary_air_system_test_complete = secondary_air_system_test_complete;
+
+        status.evaporative_system_test_available = evaporative_system_test_available;
+        status.evaporative_system_test_complete = evaporative_system_test_complete;
+
+        status.heated_catalyst_test_available = heated_catalyst_test_available;
+        status.heated_catalyst_test_complete = heated_catalyst_test_complete;
+
+        status.catalyst_test_available = catalyst_test_available;
+        status.catalyst_test_complete = catalyst_test_complete;
+
+    } else {
+        status.egr_system_test_available = egr_system_test_available;
+        status.egr_system_test_complete = egr_system_test_complete;
+
+        status.pm_filter_monitoring_test_available = pm_filter_monitoring_test_available;
+        status.pm_filter_monitoring_test_complete = pm_filter_monitoring_test_complete;
+
+        status.exhaust_gas_sensor_test_available = exhaust_gas_sensor_test_available;
+        status.exhaust_gas_sensor_test_complete = exhaust_gas_sensor_test_complete;
+
+        status.boost_pressure_test_available = boost_pressure_test_available;
+        status.boost_pressure_test_complete = boost_pressure_test_complete;
+
+        status.nox_scr_sensor_test_available = nox_scr_sensor_test_available;
+        status.nox_scr_sensor_test_complete = nox_scr_sensor_test_complete;
+
+        status.nmhc_catalyst_test_available = nmhc_catalyst_test_available;
+        status.nmhc_catalyst_test_complete = nmhc_catalyst_test_complete;
+    }
 
     return status;
 }

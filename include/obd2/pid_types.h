@@ -29,6 +29,56 @@ extern "C"
         bool fuel_system_test_complete;
         bool components_test_complete;
 
+        // spark engine specific
+
+        bool vvt_test_available;
+        bool vvt_test_complete;
+
+        bool oxygen_sensor_heater_test_available;
+        bool oxygen_sensor_heater_test_complete;
+
+        bool oxygen_sensor_test_available;
+        bool oxygen_sensor_test_complete;
+
+        bool gasoline_particulate_filter_test_available;
+        bool gasoline_particulate_filter_test_complete;
+
+        bool secondary_air_system_test_available;
+        bool secondary_air_system_test_complete;
+
+        bool evaporative_system_test_available;
+        bool evaporative_system_test_complete;
+
+        bool heated_catalyst_test_available;
+        bool heated_catalyst_test_complete;
+
+        bool catalyst_test_available;
+        bool catalyst_test_complete;
+
+        // compression engine specific
+
+        bool egr_system_test_available;
+        bool egr_system_test_complete;
+
+        bool pm_filter_monitoring_test_available;
+        bool pm_filter_monitoring_test_complete;
+
+        bool exhaust_gas_sensor_test_available;
+        bool exhaust_gas_sensor_test_complete;
+
+        // reserved bits
+
+        bool boost_pressure_test_available;
+        bool boost_pressure_test_complete;
+
+        // reserved bits
+
+        bool nox_scr_sensor_test_available;
+        bool nox_scr_sensor_test_complete;
+
+        bool nmhc_catalyst_test_available;
+        bool nmhc_catalyst_test_complete;
+
     } obd2_dtc_status_t;
     
 
