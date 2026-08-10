@@ -28,9 +28,9 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
 
     // byte_b & 0b10000000 -> reserved, should be 0
 
-    bool misfire_available_dtc = (byte_B & (1 << 0)) == 1;
-    bool fuel_system_available_dtc = (byte_B & (1 << 1)) == 1;
-    bool components_available_dtc = (byte_B & (1 << 2)) == 1;
+    bool misfire_available_dtc = (byte_B & (1 << 0)) != 0;
+    bool fuel_system_available_dtc = (byte_B & (1 << 1)) != 0;
+    bool components_available_dtc = (byte_B & (1 << 2)) != 0;
 
     bool is_spark_engine = (byte_B & (1 << 3)) == 0; // if true then its spark engine, else compression engine
 
@@ -121,13 +121,13 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
         .is_spark_engine = is_spark_engine,
 
         .misfire_test_available = misfire_available_dtc,
-        .misfire_test_complete = misfire_complete_dtc,
-
         .fuel_system_test_available = fuel_system_available_dtc,
-        .fuel_system_test_complete = fuel_system_complete_dtc,
-
         .components_test_available = components_available_dtc,
+        
+        .misfire_test_complete = misfire_complete_dtc,
+        .fuel_system_test_complete = fuel_system_complete_dtc,
         .components_test_complete = components_complete_dtc,
+
     };
 
     if (is_spark_engine) {
@@ -178,6 +178,27 @@ obd2_dtc_status_t parse_dtc_since_cleared(double decoded_mask) {
     return status;
 }
 
+static fuel_system_status_t decode_single_fuel_system(uint8_t byte) {
+    switch (byte)
+    {
+        case 0:
+            return MOTOR_OFF;
+        case 1:
+            return OPEN_LOOP_INSUFFICIENT_TEMP;
+        case 2:
+            return CLOSED_LOOP_OXYGEN_SENSOR_FEEDBACK;
+        case 4:
+            return OPEN_LOOP_ENGINE_LOAD_OR_FUEL_CUT_DECEL;
+        case 8:
+            return OPEN_LOOP_SYSTEM_FAIL;
+        case 16:
+            return CLOSED_LOOP_ATLEAST_ONE_OXYGEN_SENSOR_FAULT_FEEDBACK_SYSTEM;
+
+        default:
+            return UNKNOWN;
+    }
+}
+
 // ---- low level decoders ----
 
 double decode_bitmask_4byte(uint8_t* data, size_t length) {
@@ -193,11 +214,112 @@ double decode_bitmask_4byte(uint8_t* data, size_t length) {
     return (double)bitmask;
 }
 
+obd2_dtc_freeze_frame_t decode_freeze_frame(uint8_t* data, size_t length) {
+    obd2_dtc_freeze_frame_t frame = {0};
+    
+    if (length < 2) return frame;
+
+
+    frame.category = data[0] >> 6;
+    frame.category_number = ((uint16_t)data[1] << 6) | (data[0] & 0b00111111);
+
+    return frame;
+}
+
+fuel_system_status_state_t decode_fuel_system(uint8_t* data, size_t length) {
+    fuel_system_status_state_t state = {
+        .sys1 = MOTOR_OFF,
+        .has_sys2 = false,
+        .sys2 = MOTOR_OFF
+    };
+
+    if (length < 2) return state;
+
+    state.sys1 = decode_single_fuel_system(data[0]);
+    state.sys2 = decode_single_fuel_system(data[1]);
+
+    state.has_sys2 = data[1] != 0; // if == 0 then probably unsupported
+
+    return state;
+}
+
+double decode_percent(uint8_t* data, size_t length) {
+    return data[0] / 2.55;
+}
+
+double decode_temp_c(uint8_t* data, size_t length) {
+    return data[0] - 40;
+}
+
+double decode_fuel_trim(uint8_t* data, size_t length) {
+    return (data[0] / 1.28) - 100;
+}
+
+double decode_pressure_3a(uint8_t* data, size_t length) {
+    return 3 * data[0];
+}
+
+double decode_raw_1byte(uint8_t* data, size_t length) {
+    return data[0];
+}
+
+double decode_rpm(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return (256.0 * data[0] + data[1]) / 4.0;
+}
+
+double decode_timing_advance(uint8_t* data, size_t length) {
+    return (data[0] / 2) - 64;
+}
+
+double decode_maf(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return (256.0 * data[0] + data[1]) / 100.0;
+}
+
+double decode_o2_voltage(uint8_t* data, size_t length) {
+    return data[0] / 200.0;
+} 
+
+double decode_raw_2byte(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return 256.0 * data[0] + data[1];
+}
+
+double decode_fuel_rail_rel(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return 0.079 * (256.0 * data[0] + data[1]);
+}
+
+double decode_fuel_rail_abs(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return 10.0 * (256.0 * data[0] + data[1]);
+}
+
+double decode_o2_ratio(uint8_t* data, size_t length) {
+    if (length != 4) return 0;
+    float afr =     (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
+    float voltage = (float) (8.0/65536.0) * (256.0 * data[2] + data[3]);
+
+    uint32_t afr_bits, volt_bits;
+    memcpy(&afr_bits, &afr, sizeof(float));
+    memcpy(&volt_bits, &voltage, sizeof(float));
+
+    uint64_t combined = ((uint64_t) afr_bits << 32) | volt_bits;
+
+    double result;
+    memcpy(&result, &combined, sizeof(double));
+
+    return result;
+}
+
 static const obd2_pid_definition_t STANDART_PIDS[] = {
     {0x00, "PIDs supported [01 - 20]", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
     {0x01, "Monitor status since DTCs cleared", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
-    {0x02, "Freeze frame DTC", "Raw", decode_raw_2byte, 2, 0, 65535, "DTC that caused freeze frame"},
-    {0x03, "Fuel system status", "Bitmask", decode_raw_2byte, 2, 0, 65535, ""},
+    {0x02, "Freeze frame DTC", "Raw", decode_freeze_frame, 2, 0, 65535, "DTC that caused freeze frame"},
+    {0x03, "Fuel system status", "Bitmask", decode_fuel_system, 2, 0, 65535, ""},
     {0x04, "Calculated engine load", "%", decode_percent, 1, 0, 100, ""},
     {0x05, "Engine coolant temperature", "°C", decode_temp_c, 1, -40, 215, ""},
     {0x06, "Short term fuel trim (Bank 1)", "%", decode_fuel_trim, 1, -100, 99.2, ""},
@@ -245,7 +367,7 @@ static const obd2_pid_definition_t STANDART_PIDS[] = {
     {0x30, "Warm-ups since codes cleared", "Count", decode_raw_1byte, 1, 0, 255, ""},
     {0x31, "Distance since codes cleared", "km", decode_raw_2byte, 2, 0, 65535, ""},
     {0x32, "Evap. System Vapor Pressure", "Pa", decode_evap_pressure, 2, -8192, 8191.75, ""},
-    {0x33, "Absolute Barometric Pressure", "kPa", decode_raw_1byte, 1, 0, 255, ""}.
+    {0x33, "Absolute Barometric Pressure", "kPa", decode_raw_1byte, 1, 0, 255, ""},
     /* --- Wideband Oxygen Sensors (Current) --- */
     {0x34, "O2 Sensor 1 (Wideband) Current", "mA", decode_o2_current, 4, -128, 128, ""},
     {0x35, "O2 Sensor 2 (Wideband) Current", "mA", decode_o2_current, 4, -128, 128, ""},
