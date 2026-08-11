@@ -298,6 +298,7 @@ double decode_fuel_rail_abs(uint8_t* data, size_t length) {
     return 10.0 * (256.0 * data[0] + data[1]);
 }
 
+// higher 4 bytes is air fuel ratio, lower 4 bytes is voltage
 double decode_o2_ratio(uint8_t* data, size_t length) {
     if (length != 4) return 0;
     float afr =     (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
@@ -313,6 +314,55 @@ double decode_o2_ratio(uint8_t* data, size_t length) {
     memcpy(&result, &combined, sizeof(double));
 
     return result;
+}
+
+double decode_evap_pressure(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+    return (256.0 * data[0] + data[1]) / 4.0;
+}
+
+// higher 4 bytes is air fuel equivalence ratio, lower 4 bytes is current
+double decode_o2_current(uint8_t* data, size_t length) {
+    if (length != 4) return 0;
+
+    float afr =     (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
+    float current = (float) ((256.0 * data[2] + data[3]) / 256.0) - 128.0;
+
+    uint32_t afr_bits, current_bits;
+    memcpy(&afr_bits, &afr, sizeof(float));
+    memcpy(&current_bits, &current, sizeof(float));
+
+    uint64_t combined = ((uint64_t) afr_bits << 32) | current_bits;
+
+    double result;
+    memcpy(&result, &combined, sizeof(double));
+
+    return result;
+}
+
+ double decode_catalyst_temp(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return ( (256.0 * data[0] + data[1]) / 10.0 ) - 40.0;
+ }
+
+ double decode_module_voltage(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return (256.0 * data[0] + data[1]) / 100.0;
+ }
+
+double decode_abs_load(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return ( 100.0 / 255.0 ) * (256.0 * data[0] + data[1]);
+}
+
+// commanded air-fuel equivalence ratio
+double decode_lambda(uint8_t* data, size_t length) {
+    if (length != 2) return 0;
+
+    return ( 2.0 / 65536.0 ) * (256.0 * data[0] + data[1]);
 }
 
 static const obd2_pid_definition_t STANDART_PIDS[] = {
@@ -352,14 +402,14 @@ static const obd2_pid_definition_t STANDART_PIDS[] = {
     {0x21, "Distance traveled with MIL on", "km", decode_raw_2byte, 2, 0, 65535, ""},
     {0x22, "Fuel Rail Pressure (relative)", "kPa", decode_fuel_rail_rel, 2, 0, 5177.265, ""},
     {0x23, "Fuel Rail Gauge Pressure", "kPa", decode_fuel_rail_abs, 2, 0, 655350, "Diesel or GDI"},
-    {0x24, "O2 Sensor 1 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x25, "O2 Sensor 2 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x26, "O2 Sensor 3 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x27, "O2 Sensor 4 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x28, "O2 Sensor 5 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x29, "O2 Sensor 6 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x2A, "O2 Sensor 7 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
-    {0x2B, "O2 Sensor 8 (Wideband) Ratio", "Ratio", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x24, "O2 Sensor 1 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x25, "O2 Sensor 2 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x26, "O2 Sensor 3 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x27, "O2 Sensor 4 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x28, "O2 Sensor 5 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x29, "O2 Sensor 6 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x2A, "O2 Sensor 7 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
+    {0x2B, "O2 Sensor 8 (Wideband) Ratio", "Ratio/V", decode_o2_ratio, 4, 0, 2.0, ""},
     {0x2C, "Commanded EGR", "%", decode_percent, 1, 0, 100, ""},
     {0x2D, "EGR Error", "%", decode_fuel_trim, 1, -100, 99.2, ""},
     {0x2E, "Commanded evaporative purge", "%", decode_percent, 1, 0, 100, ""},
