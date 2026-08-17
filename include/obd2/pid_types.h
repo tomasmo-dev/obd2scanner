@@ -114,7 +114,44 @@ extern "C"
      * @param length  Number of bytes in the payload.
      * @return The calculated physical value as a double.
      */
-    typedef double (*obd2_pid_decoder_fn)(const uint8_t *payload, size_t length);
+
+    typedef enum {
+        OBD2_VALUE_NUMERIC,
+        OBD2_VALUE_BITMASK,
+        OBD2_VALUE_FUEL_SYSTEM,
+        OBD2_VALUE_DTC,
+        OBD2_VALUE_FREEZE_FRAME,
+        OBD2_VALUE_O2_RATIO,
+        OBD2_VALUE_AFR_OV_OC_MAF
+    } obd2_value_type_t;
+
+    typedef struct {
+        float afr;
+        float voltage_or_current;
+    } obd2_o2_ratio_t;
+
+    typedef struct {
+        uint8_t afr;
+        uint8_t oxygen_voltage;
+        uint8_t oxygen_current;
+        uint16_t maf;
+    } obd2_afr_ov_oc_maf_t;
+
+    typedef struct obd2_decoded_t {
+        obd2_value_type_t type;
+
+        union {
+            double numeric;
+            uint32_t bitmask;
+            obd2_dtc_freeze_frame_t freeze_frame;
+            fuel_system_status_state_t fuel_system;
+            obd2_dtc_status_t dtc_status;
+            obd2_o2_ratio_t o2_ratio;
+            obd2_afr_ov_oc_maf_t afr_ov_oc_maf;
+        } data;
+    } obd2_decoded_t;
+
+    typedef obd2_decoded_t (*obd2_pid_decoder_fn)(const uint8_t *payload, size_t length);
 
     /**
      * @brief Defines the metadata and calculation logic for a single OBD2 PID.
@@ -131,6 +168,7 @@ extern "C"
         double min_value;        /* Bounding minimum value */
         double max_value;        /* Bounding maximum value */
         const char *description; /* Detailed description */
+        bool is_available;
     } obd2_pid_definition_t;
 
     /**
@@ -139,7 +177,9 @@ extern "C"
      * @param pid The PID code to look up (e.g., 0x0C).
      * @return Pointer to the PID definition, or NULL if not supported/found.
      */
-    const obd2_pid_definition_t *obd2_get_pid_definition(uint8_t pid);
+    obd2_pid_definition_t *obd2_get_pid_definition(uint8_t pid);
+    void obd2_update_supported_pids(uint8_t support_pid, uint32_t bitmask);
+    void obd2_update_supported_o2_sensors(uint8_t pid, uint32_t bitmask);
 
 #ifdef __cplusplus
 }

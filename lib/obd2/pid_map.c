@@ -201,171 +201,189 @@ static fuel_system_status_t decode_single_fuel_system(uint8_t byte) {
 
 // ---- low level decoders ----
 
-double decode_bitmask_4byte(uint8_t* data, size_t length) {
-    if (length < 4) return 0.0;
-
-    /* Shift and merge the 4 bytes into a single 32-bit integer */
-    uint32_t bitmask = ((uint32_t)data[0] << 24) |  /* Shift 1st byte to highest 8 bits */
-                       ((uint32_t)data[1] << 16) |  /* Shift 2nd byte to next 8 bits */
-                       ((uint32_t)data[2] << 8)  |  /* Shift 3rd byte to next 8 bits */
-                       ((uint32_t)data[3]);         /* 4th byte stays in lowest 8 bits */
-
-    /* Cast to double so it fits our generic obd2_pid_decoder_fn signature */
-    return (double)bitmask;
+obd2_decoded_t decode_bitmask_4byte(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_BITMASK};
+    if (length < 4) { res.data.bitmask = 0; return res; }
+    uint32_t bitmask = ((uint32_t)data[0] << 24) | ((uint32_t)data[1] << 16) | ((uint32_t)data[2] << 8) | ((uint32_t)data[3]);
+    res.data.bitmask = bitmask;
+    return res;
 }
 
-obd2_dtc_freeze_frame_t decode_freeze_frame(uint8_t* data, size_t length) {
-    obd2_dtc_freeze_frame_t frame = {0};
-    
-    if (length < 2) return frame;
-
-
-    frame.category = data[0] >> 6;
-    frame.category_number = ((uint16_t)data[1] << 6) | (data[0] & 0b00111111);
-
-    return frame;
+obd2_decoded_t decode_freeze_frame(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_FREEZE_FRAME};
+    if (length < 2) return res;
+    res.data.freeze_frame.category = data[0] >> 6;
+    res.data.freeze_frame.category_number = ((uint16_t)data[1] << 6) | (data[0] & 0b00111111);
+    return res;
 }
 
-fuel_system_status_state_t decode_fuel_system(uint8_t* data, size_t length) {
-    fuel_system_status_state_t state = {
-        .sys1 = MOTOR_OFF,
-        .has_sys2 = false,
-        .sys2 = MOTOR_OFF
-    };
-
-    if (length < 2) return state;
-
-    state.sys1 = decode_single_fuel_system(data[0]);
-    state.sys2 = decode_single_fuel_system(data[1]);
-
-    state.has_sys2 = data[1] != 0; // if == 0 then probably unsupported
-
-    return state;
+obd2_decoded_t decode_fuel_system(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_FUEL_SYSTEM};
+    res.data.fuel_system.sys1 = MOTOR_OFF;
+    res.data.fuel_system.sys2 = MOTOR_OFF;
+    res.data.fuel_system.has_sys2 = false;
+    if (length < 2) return res;
+    res.data.fuel_system.sys1 = decode_single_fuel_system(data[0]);
+    res.data.fuel_system.sys2 = decode_single_fuel_system(data[1]);
+    res.data.fuel_system.has_sys2 = (data[1] != 0);
+    return res;
 }
 
-double decode_percent(uint8_t* data, size_t length) {
-    return data[0] / 2.55;
+obd2_decoded_t decode_percent(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = data[0] / 2.55;
+    return res;
 }
 
-double decode_temp_c(uint8_t* data, size_t length) {
-    return data[0] - 40;
+obd2_decoded_t decode_temp_c(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = data[0] - 40;
+    return res;
 }
 
-double decode_fuel_trim(uint8_t* data, size_t length) {
-    return (data[0] / 1.28) - 100;
+obd2_decoded_t decode_fuel_trim(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = (data[0] / 1.28) - 100;
+    return res;
 }
 
-double decode_pressure_3a(uint8_t* data, size_t length) {
-    return 3 * data[0];
+obd2_decoded_t decode_pressure_3a(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = 3 * data[0];
+    return res;
 }
 
-double decode_raw_1byte(uint8_t* data, size_t length) {
-    return data[0];
+obd2_decoded_t decode_raw_1byte(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = data[0];
+    return res;
 }
 
-double decode_rpm(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
+obd2_decoded_t decode_rpm(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
 
-    return (256.0 * data[0] + data[1]) / 4.0;
+    res.data.numeric = (256.0 * data[0] + data[1]) / 4.0;
+    return res;
 }
 
-double decode_timing_advance(uint8_t* data, size_t length) {
-    return (data[0] / 2) - 64;
+obd2_decoded_t decode_timing_advance(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = (data[0] / 2) - 64;
+    return res;
 }
 
-double decode_maf(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
+obd2_decoded_t decode_maf(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
 
-    return (256.0 * data[0] + data[1]) / 100.0;
+    res.data.numeric = (256.0 * data[0] + data[1]) / 100.0;
+    return res;
 }
 
-double decode_o2_voltage(uint8_t* data, size_t length) {
-    return data[0] / 200.0;
-} 
-
-double decode_raw_2byte(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
-    return 256.0 * data[0] + data[1];
+obd2_decoded_t decode_o2_voltage(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    res.data.numeric = data[0] / 200.0;
+    return res;
 }
 
-double decode_fuel_rail_rel(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
-    return 0.079 * (256.0 * data[0] + data[1]);
+obd2_decoded_t decode_raw_2byte(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
+    res.data.numeric = 256.0 * data[0] + data[1];
+    return res;
 }
 
-double decode_fuel_rail_abs(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
-    return 10.0 * (256.0 * data[0] + data[1]);
+obd2_decoded_t decode_fuel_rail_rel(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
+    res.data.numeric = 0.079 * (256.0 * data[0] + data[1]);
+    return res;
+}
+
+obd2_decoded_t decode_fuel_rail_abs(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
+    res.data.numeric = 10.0 * (256.0 * data[0] + data[1]);
+    return res;
 }
 
 // higher 4 bytes is air fuel ratio, lower 4 bytes is voltage
-double decode_o2_ratio(uint8_t* data, size_t length) {
-    if (length != 4) return 0;
-    float afr =     (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
-    float voltage = (float) (8.0/65536.0) * (256.0 * data[2] + data[3]);
-
-    uint32_t afr_bits, volt_bits;
-    memcpy(&afr_bits, &afr, sizeof(float));
-    memcpy(&volt_bits, &voltage, sizeof(float));
-
-    uint64_t combined = ((uint64_t) afr_bits << 32) | volt_bits;
-
-    double result;
-    memcpy(&result, &combined, sizeof(double));
-
-    return result;
+obd2_decoded_t decode_o2_ratio(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_O2_RATIO};
+    if (length != 4) return res;
+    res.data.o2_ratio.afr = (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
+    res.data.o2_ratio.voltage_or_current = (float) (8.0/65536.0) * (256.0 * data[2] + data[3]);
+    return res;
 }
 
-double decode_evap_pressure(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
-    return (256.0 * data[0] + data[1]) / 4.0;
+obd2_decoded_t decode_evap_pressure(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
+    res.data.numeric = (256.0 * data[0] + data[1]) / 4.0;
+    return res;
 }
 
 // higher 4 bytes is air fuel equivalence ratio, lower 4 bytes is current
-double decode_o2_current(uint8_t* data, size_t length) {
-    if (length != 4) return 0;
-
-    float afr =     (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
-    float current = (float) ((256.0 * data[2] + data[3]) / 256.0) - 128.0;
-
-    uint32_t afr_bits, current_bits;
-    memcpy(&afr_bits, &afr, sizeof(float));
-    memcpy(&current_bits, &current, sizeof(float));
-
-    uint64_t combined = ((uint64_t) afr_bits << 32) | current_bits;
-
-    double result;
-    memcpy(&result, &combined, sizeof(double));
-
-    return result;
+obd2_decoded_t decode_o2_current(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_O2_RATIO};
+    if (length != 4) return res;
+    res.data.o2_ratio.afr = (float) (2.0/65536.0) * (256.0 * data[0] + data[1]);
+    res.data.o2_ratio.voltage_or_current = (float) ((256.0 * data[2] + data[3]) / 256.0) - 128.0;
+    return res;
 }
 
- double decode_catalyst_temp(uint8_t* data, size_t length) {
+ double decode_catalyst_temp(const uint8_t* data, size_t length) {
     if (length != 2) return 0;
 
     return ( (256.0 * data[0] + data[1]) / 10.0 ) - 40.0;
  }
 
- double decode_module_voltage(uint8_t* data, size_t length) {
+ double decode_module_voltage(const uint8_t* data, size_t length) {
     if (length != 2) return 0;
 
     return (256.0 * data[0] + data[1]) / 100.0;
  }
 
-double decode_abs_load(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
+obd2_decoded_t decode_abs_load(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
 
-    return ( 100.0 / 255.0 ) * (256.0 * data[0] + data[1]);
+    res.data.numeric = ( 100.0 / 255.0 ) * (256.0 * data[0] + data[1]);
+    return res;
 }
 
 // commanded air-fuel equivalence ratio
-double decode_lambda(uint8_t* data, size_t length) {
-    if (length != 2) return 0;
+obd2_decoded_t decode_lambda(const uint8_t* data, size_t length) {
+    obd2_decoded_t res = {.type = OBD2_VALUE_NUMERIC};
+    res.data.numeric = 0;
+    if (length != 2) ) return res;
 
-    return ( 2.0 / 65536.0 ) * (256.0 * data[0] + data[1]);
+    res.data.numeric = ( 2.0 / 65536.0 ) * (256.0 * data[0] + data[1]);
+    return res;
 }
 
-static const obd2_pid_definition_t STANDART_PIDS[] = {
+
+obd2_decoded_t decode_multiplexed(const uint8_t* data, size_t length) { obd2_decoded_t r={.type=OBD2_VALUE_NUMERIC}; r.data.numeric=0; return r; }
+obd2_decoded_t decode_evap_vp_abs(const uint8_t* data, size_t length) { obd2_decoded_t r={.type=OBD2_VALUE_NUMERIC}; r.data.numeric=0; return r; }
+obd2_decoded_t decode_fuel_inj_timing(const uint8_t* data, size_t length) { obd2_decoded_t r={.type=OBD2_VALUE_NUMERIC}; r.data.numeric=0; return r; }
+obd2_decoded_t decode_engine_fuel_rate(const uint8_t* data, size_t length) { obd2_decoded_t r={.type=OBD2_VALUE_NUMERIC}; r.data.numeric=0; return r; }
+obd2_decoded_t decode_torque(const uint8_t* data, size_t length) { obd2_decoded_t r={.type=OBD2_VALUE_NUMERIC}; r.data.numeric=0; return r; }
+obd2_pid_definition_t STANDART_PIDS[] = {
     {0x00, "PIDs supported [01 - 20]", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
     {0x01, "Monitor status since DTCs cleared", "Bitmask", decode_bitmask_4byte, 4, 0, 4294967295, ""},
     {0x02, "Freeze frame DTC", "Raw", decode_freeze_frame, 2, 0, 65535, "DTC that caused freeze frame"},
@@ -565,3 +583,41 @@ static const obd2_pid_definition_t STANDART_PIDS[] = {
     {0xC4, "Drive Motor B Position", "Enum", decode_raw_2byte, 2, 0, 65535, ""},
     {0xC8, "NOx Sensor Calibration", "Enum", decode_raw_2byte, 2, 0, 65535, ""}
 };
+obd2_pid_definition_t *obd2_get_pid_definition(uint8_t pid) {
+    int num_pids = sizeof(STANDART_PIDS) / sizeof(STANDART_PIDS[0]);
+    for (int i = 0; i < num_pids; i++) {
+        if (STANDART_PIDS[i].pid == pid) {
+            return &STANDART_PIDS[i];
+        }
+    }
+    return NULL;
+}
+
+void obd2_update_supported_pids(uint8_t support_pid, uint32_t bitmask) {
+    for (int i = 1; i <= 32; i++) {
+        uint8_t target_pid = support_pid + i;
+        bool is_supported = (bitmask & (1U << (32 - i))) != 0;
+        
+        obd2_pid_definition_t *def = obd2_get_pid_definition(target_pid);
+        if (def != NULL) {
+            def->is_available = is_supported;
+        }
+    }
+}
+
+void obd2_update_supported_o2_sensors(uint8_t pid, uint32_t bitmask) {
+    if (pid == 0x13) {
+        for (int i = 0; i < 8; i++) {
+            bool supported = (bitmask & (1 << i)) != 0;
+            obd2_pid_definition_t *def = obd2_get_pid_definition(0x14 + i);
+            if (def) def->is_available = supported;
+        }
+    } else if (pid == 0x1D) {
+        uint8_t target_pids[] = {0x14, 0x15, 0x18, 0x19, 0x16, 0x17, 0x1A, 0x1B};
+        for (int i = 0; i < 8; i++) {
+            bool supported = (bitmask & (1 << i)) != 0;
+            obd2_pid_definition_t *def = obd2_get_pid_definition(target_pids[i]);
+            if (def) def->is_available = supported;
+        }
+    }
+}
