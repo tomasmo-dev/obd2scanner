@@ -8,8 +8,15 @@
 char* AT_reset_elm() {
     sendCommand("AT Z");
 
-    result = readConnection(); // reserved for possible future readline function and or correcting the output
+    char* result = readConnection(); // reserved for possible future readline function and or correcting the output
     return result;
 }
 
-char* AT_set_echo()
+char* AT_set_echo(bool echo) {
+    if (echo) {
+        sendCommand("AT E1");
+    } else {
+        sendCommand("AT E0");
+    }
+    return readConnection();
+}
